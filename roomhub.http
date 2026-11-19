@@ -1,0 +1,118 @@
+### Variables
+@baseUrl = http://localhost:5090
+
+### 1. Create room (201 + Location)
+# @name createRoom
+POST {{baseUrl}}/api/rooms
+Content-Type: application/json
+
+{ "name": "Study room 1", "capacity": 10 }
+
+###
+@roomId = {{createRoom.response.body.$.id}}
+
+### 2. Get room (200)
+GET {{baseUrl}}/api/rooms/{{roomId}}
+
+### 3. Get a missing room (404)
+GET {{baseUrl}}/api/rooms/00000000-0000-0000-0000-000000000001
+
+### R1: empty name (400)
+POST {{baseUrl}}/api/rooms
+Content-Type: application/json
+
+{ "name": "   ", "capacity": 10 }
+
+### R1: capacity 0 (400)
+POST {{baseUrl}}/api/rooms
+Content-Type: application/json
+
+{ "name": "Bad room", "capacity": 0 }
+
+### 4. Create booking (201)
+# @name createBooking
+POST {{baseUrl}}/api/rooms/{{roomId}}/bookings
+Content-Type: application/json
+
+{ "bookedBy": "ana", "startUtc": "2030-01-10T10:00:00Z", "endUtc": "2030-01-10T12:00:00Z", "attendees": 4 }
+
+###
+@bookingId = {{createBooking.response.body.$.id}}
+
+### 5. Get booking (200, dates end with Z, status Active)
+GET {{baseUrl}}/api/bookings/{{bookingId}}
+
+### R7: overlapping booking (409)
+POST {{baseUrl}}/api/rooms/{{roomId}}/bookings
+Content-Type: application/json
+
+{ "bookedBy": "bogdan", "startUtc": "2030-01-10T11:00:00Z", "endUtc": "2030-01-10T13:00:00Z", "attendees": 4 }
+
+### R7: touching booking, starts exactly when the first one ends (201)
+POST {{baseUrl}}/api/rooms/{{roomId}}/bookings
+Content-Type: application/json
+
+{ "bookedBy": "bogdan", "startUtc": "2030-01-10T12:00:00Z", "endUtc": "2030-01-10T13:00:00Z", "attendees": 4 }
+
+### R2: bookedBy missing (400)
+POST {{baseUrl}}/api/rooms/{{roomId}}/bookings
+Content-Type: application/json
+
+{ "bookedBy": "", "startUtc": "2030-02-01T10:00:00Z", "endUtc": "2030-02-01T11:00:00Z", "attendees": 4 }
+
+### R3: end before start (400)
+POST {{baseUrl}}/api/rooms/{{roomId}}/bookings
+Content-Type: application/json
+
+{ "bookedBy": "ana", "startUtc": "2030-02-01T11:00:00Z", "endUtc": "2030-02-01T10:00:00Z", "attendees": 4 }
+
+### R4: attendees 0 (400)
+POST {{baseUrl}}/api/rooms/{{roomId}}/bookings
+Content-Type: application/json
+
+{ "bookedBy": "ana", "startUtc": "2030-02-01T10:00:00Z", "endUtc": "2030-02-01T11:00:00Z", "attendees": 0 }
+
+### R4: more attendees than capacity (400)
+POST {{baseUrl}}/api/rooms/{{roomId}}/bookings
+Content-Type: application/json
+
+{ "bookedBy": "ana", "startUtc": "2030-02-01T10:00:00Z", "endUtc": "2030-02-01T11:00:00Z", "attendees": 11 }
+
+### R5: starts in the past (400)
+POST {{baseUrl}}/api/rooms/{{roomId}}/bookings
+Content-Type: application/json
+
+{ "bookedBy": "ana", "startUtc": "2020-01-01T10:00:00Z", "endUtc": "2020-01-01T11:00:00Z", "attendees": 4 }
+
+### R6: 5 hours (400)
+POST {{baseUrl}}/api/rooms/{{roomId}}/bookings
+Content-Type: application/json
+
+{ "bookedBy": "ana", "startUtc": "2030-03-01T08:00:00Z", "endUtc": "2030-03-01T13:00:00Z", "attendees": 4 }
+
+### R6: exactly 4 hours (201)
+POST {{baseUrl}}/api/rooms/{{roomId}}/bookings
+Content-Type: application/json
+
+{ "bookedBy": "ana", "startUtc": "2030-03-01T08:00:00Z", "endUtc": "2030-03-01T12:00:00Z", "attendees": 4 }
+
+### Missing room + invalid body: 404 comes first
+POST {{baseUrl}}/api/rooms/00000000-0000-0000-0000-000000000001/bookings
+Content-Type: application/json
+
+{ "bookedBy": "", "startUtc": "2020-01-01T10:00:00Z", "endUtc": "2019-01-01T10:00:00Z", "attendees": -1 }
+
+### 7. Cancel booking (204)
+POST {{baseUrl}}/api/bookings/{{bookingId}}/cancel
+
+### R8: cancel again (409)
+POST {{baseUrl}}/api/bookings/{{bookingId}}/cancel
+
+### R8: cancelled booking frees its interval (201)
+POST {{baseUrl}}/api/rooms/{{roomId}}/bookings
+Content-Type: application/json
+
+{ "bookedBy": "carmen", "startUtc": "2030-01-10T10:00:00Z", "endUtc": "2030-01-10T12:00:00Z", "attendees": 4 }
+
+### R8: cancel a missing booking (404)
+POST {{baseUrl}}/api/bookings/00000000-0000-0000-0000-000000000001/cancel
