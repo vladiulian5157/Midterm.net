@@ -13,5 +13,6 @@ public sealed class RoomConfiguration : IEntityTypeConfiguration<Room>
         builder.Property(r => r.Id).ValueGeneratedNever();
         builder.Property(r => r.Name).IsRequired().HasMaxLength(200);
         builder.Property(r => r.Capacity).IsRequired();
+        builder.Ignore(r => r.MaxBookingDuration);   // computed from Capacity, not stored
     }
 }

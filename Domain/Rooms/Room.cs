@@ -10,6 +10,11 @@ public sealed class Room
     public string Name { get; private set; } = string.Empty;
     public int Capacity { get; private set; }
 
+    // R10: rooms with capacity > 10 allow at most 2 hours, the others keep the 4-hour limit (R6).
+    // Exactly the limit is allowed.
+    public TimeSpan MaxBookingDuration =>
+        Capacity > 10 ? TimeSpan.FromHours(2) : TimeSpan.FromHours(4);
+
     // R1: non-empty name, strictly positive capacity.
     public static Result<Room> Create(string? name, int capacity)
     {

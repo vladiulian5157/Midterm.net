@@ -22,8 +22,13 @@ public sealed class CreateBookingHandler(
         var activeBookings = await bookings.ListActiveForRoomAsync(room.Id, cancellationToken);
         var nowUtc = timeProvider.GetUtcNow().UtcDateTime;
 
+        // R9: the participant's active bookings on the UTC day of startUtc, across all rooms.
+        var participant = (command.BookedBy ?? string.Empty).Trim();
+        var startUtc = Booking.NormalizeUtc(command.StartUtc);
+        var participantBookings = await bookings.ListActiveForParticipantOnDayAsync(participant, startUtc, cancellationToken);
+
         var created = Booking.Create(
-            room, command.BookedBy, command.StartUtc, command.EndUtc, command.Attendees, nowUtc, activeBookings);
+            room, command.BookedBy, command.StartUtc, command.EndUtc, command.Attendees, nowUtc, activeBookings, participantBookings);
         if (created.IsFailure)
             return created.Error;
 
